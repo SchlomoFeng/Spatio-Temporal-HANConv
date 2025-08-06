@@ -9,8 +9,8 @@ import pandas as pd
 import numpy as np
 from torch_geometric.data import HeteroData
 from typing import Dict, List, Tuple, Any, Optional
-from topology_parser import TopologyParser
-from sensor_data_cleaner import SensorDataCleaner
+from .topology_parser import TopologyParser
+from .sensor_data_cleaner import SensorDataCleaner
 
 
 class GraphBuilder:

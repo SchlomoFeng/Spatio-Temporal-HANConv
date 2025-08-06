@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch_geometric.data import HeteroData
 from typing import List, Dict, Tuple, Optional
 import numpy as np
-from data_preprocessing.graph_builder import GraphBuilder
+from ..data_preprocessing.graph_builder import GraphBuilder
 
 
 class HeteroGraphDataset(Dataset):

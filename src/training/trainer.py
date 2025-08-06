@@ -12,10 +12,10 @@ import logging
 from pathlib import Path
 import numpy as np
 
-from models.hetero_autoencoder import HeteroAutoencoder, HeteroAutoencoderEnsemble
-from utils import (EarlyStopping, LearningRateScheduler, TrainingMetrics, 
+from ..models.hetero_autoencoder import HeteroAutoencoder
+from .utils import (EarlyStopping, LearningRateScheduler, TrainingMetrics, 
                    ModelCheckpoint, get_device, format_time, print_model_summary)
-from data_loader import GraphDataLoader
+from .data_loader import GraphDataLoader
 
 
 class HeteroAutoencoderTrainer:

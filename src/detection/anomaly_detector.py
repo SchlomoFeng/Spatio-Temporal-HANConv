@@ -11,8 +11,8 @@ from pathlib import Path
 import time
 import logging
 
-from models.hetero_autoencoder import HeteroAutoencoder
-from training.data_loader import StreamingDataLoader
+from ..models.hetero_autoencoder import HeteroAutoencoder
+from ..training.data_loader import StreamingDataLoader
 
 
 class AnomalyDetector:
