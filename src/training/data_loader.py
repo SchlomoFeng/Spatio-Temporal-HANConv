@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch_geometric.data import HeteroData
 from typing import List, Dict, Tuple, Optional
 import numpy as np
-from ..data_preprocessing.graph_builder import GraphBuilder
+from data_preprocessing.graph_builder import GraphBuilder
 
 
 class HeteroGraphDataset(Dataset):
@@ -373,9 +373,9 @@ class StreamingDataLoader:
 
 if __name__ == "__main__":
     # Example usage
-    from ..data_preprocessing.topology_parser import TopologyParser
-    from ..data_preprocessing.sensor_data_cleaner import SensorDataCleaner
-    from ..data_preprocessing.graph_builder import GraphBuilder
+    from data_preprocessing.topology_parser import TopologyParser
+    from data_preprocessing.sensor_data_cleaner import SensorDataCleaner
+    from data_preprocessing.graph_builder import GraphBuilder
     
     print("Testing data loader...")
     

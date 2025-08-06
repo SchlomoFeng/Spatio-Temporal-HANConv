@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Tuple, Optional, List, Any
-from .hetero_encoder import HeteroEncoder
-from .decoder import Decoder, AttentionDecoder, VariationalDecoder
+from hetero_encoder import HeteroEncoder
+from decoder import Decoder, AttentionDecoder, VariationalDecoder
 
 
 class HeteroAutoencoder(nn.Module):
