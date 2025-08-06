@@ -1,0 +1,172 @@
+# Model Configuration for Heterogeneous Graph Autoencoder
+
+# Data Configuration
+data:
+  blueprint_path: "blueprint/0708YTS4.txt"
+  sensor_data_path: "data/0708YTS4.csv"
+  window_size: 60
+  step_size: 1
+  train_ratio: 0.7
+  val_ratio: 0.15
+  # test_ratio: 0.15 (automatically calculated)
+
+# Preprocessing Configuration
+preprocessing:
+  # Sensor data cleaning
+  missing_strategy: "interpolate"  # "interpolate", "forward_fill", "backward_fill", "mean", "median"
+  outlier_method: "iqr"  # "iqr", "zscore"
+  outlier_threshold: 3.0
+  normalize_method: "standard"  # "standard", "minmax", "robust"
+  add_time_features: true
+
+  # Graph building
+  fuzzy_match_threshold: 0.6
+
+# Model Architecture Configuration
+model:
+  # Node feature dimensions (will be automatically determined)
+  encoder:
+    hidden_dim: 64
+    output_dim: 32
+    num_heads: 4
+    num_layers: 2
+    dropout: 0.1
+    stream_lstm_hidden: 32
+    stream_lstm_layers: 1
+  
+  decoder:
+    type: "basic"  # "basic", "attention", "variational"
+    hidden_dims: [64, 128, 64]
+    dropout: 0.1
+    activation: "relu"  # "relu", "gelu", "tanh"
+
+# Training Configuration
+training:
+  # Optimizer settings
+  optimizer: "adam"  # "adam", "adamw", "sgd"
+  learning_rate: 0.001
+  weight_decay: 1e-5
+  
+  # Training parameters
+  num_epochs: 100
+  batch_size: 16
+  validate_every: 1
+  save_every: 10
+  
+  # Learning rate scheduling
+  scheduler:
+    strategy: "plateau"  # "plateau", "cosine", "exponential", "step"
+    factor: 0.5
+    patience: 10
+    min_lr: 1e-6
+  
+  # Early stopping
+  early_stopping:
+    patience: 15
+    min_delta: 0.0
+    monitor: "val_loss"
+  
+  # Loss configuration
+  loss:
+    kl_weight: 1e-4  # For variational decoder
+  
+  # Data loading
+  num_workers: 0
+  pin_memory: true
+  shuffle: true
+
+# Anomaly Detection Configuration
+anomaly_detection:
+  # Threshold calibration
+  threshold_method: "statistical"  # "statistical", "percentile", "fixed"
+  threshold_value: null  # For "fixed" method
+  contamination_rate: 0.05
+  confidence_level: 0.95
+  
+  # Adaptive threshold
+  adaptive_threshold: true
+  adaptation_window: 100
+  adaptation_rate: 0.1
+  
+  # Ensemble configuration (if using ensemble)
+  ensemble:
+    enabled: false
+    num_models: 3
+    voting_method: "majority"  # "majority", "unanimous", "weighted"
+
+# Root Cause Analysis Configuration
+root_cause_analysis:
+  # Analysis parameters
+  top_k_candidates: 5
+  max_propagation_depth: 3
+  fuzzy_match_threshold: 0.6
+  
+  # Temporal analysis
+  temporal_analysis: true
+  temporal_window: 3600  # seconds
+  
+  # Centrality measures to use
+  centrality_measures:
+    - "degree_centrality"
+    - "betweenness_centrality"
+    - "closeness_centrality"
+    - "pagerank"
+
+# Visualization Configuration
+visualization:
+  # Plot settings
+  figure_size: [12, 8]
+  dpi: 300
+  save_format: "png"
+  
+  # Network visualization
+  network_layout: "spring"  # "spring", "circular", "kamada_kawai"
+  node_size_range: [50, 500]
+  edge_width_range: [0.5, 3.0]
+  
+  # Time series plots
+  max_time_points: 1000
+  anomaly_highlight_color: "red"
+  normal_color: "blue"
+
+# Logging Configuration
+logging:
+  level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  save_logs: true
+  log_file: "logs/training.log"
+
+# Output Configuration
+output:
+  # Directory structure
+  base_dir: "outputs"
+  checkpoint_dir: "checkpoints"
+  log_dir: "logs"
+  results_dir: "results"
+  plots_dir: "plots"
+  
+  # Model saving
+  save_best_only: true
+  save_last_checkpoint: true
+  
+  # Results saving
+  save_metrics: true
+  save_predictions: true
+  save_anomaly_reports: true
+
+# Hardware Configuration
+hardware:
+  device: "auto"  # "auto", "cpu", "cuda", "mps"
+  mixed_precision: false
+  compile_model: false  # PyTorch 2.0+ model compilation
+
+# Reproducibility
+random_seed: 42
+deterministic: true
+
+# Development Configuration
+debug:
+  enabled: false
+  profile_training: false
+  check_gradients: false
+  log_memory_usage: false
