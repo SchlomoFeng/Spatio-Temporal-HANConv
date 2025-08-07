@@ -1,0 +1,108 @@
+# S4 Steam Pipeline Anomaly Detection Configuration
+
+# Data settings
+data:
+  blueprint_path: "blueprint/0708YTS4.txt"
+  sensor_data_path: "data/0708YTS4.csv"
+  window_size: 60  # Time window size for LSTM
+  stride: 10       # Sliding window stride
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  scaler_type: "StandardScaler"  # StandardScaler, MinMaxScaler, RobustScaler
+  
+# Model architecture
+model:
+  # Node feature dimensions
+  stream_input_dim: 36  # Number of sensor columns 
+  static_input_dim: 10  # Static node features (type one-hot + coordinates + properties)
+  hidden_dim: 128
+  output_dim: 64
+  
+  # LSTM for Stream nodes
+  lstm:
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+    bidirectional: true
+    
+  # Linear layers for static nodes  
+  static_encoder:
+    layers: [64, 64]
+    dropout: 0.1
+    
+  # Heterogeneous graph convolution
+  hetero_conv:
+    type: "HANConv"  # "HANConv" or "HGTConv"
+    num_layers: 3
+    heads: 4  # For attention mechanisms
+    dropout: 0.2
+    
+  # Decoder MLP
+  decoder:
+    layers: [128, 64, 36]  # Reconstruct sensor readings
+    dropout: 0.2
+    activation: "ReLU"
+
+# Training settings
+training:
+  batch_size: 32
+  epochs: 200
+  learning_rate: 0.001
+  weight_decay: 1e-5
+  patience: 20  # Early stopping
+  min_delta: 1e-4
+  
+  # Loss function
+  loss_function: "MSELoss"
+  
+  # Optimizer
+  optimizer: "Adam"
+  scheduler:
+    type: "ReduceLROnPlateau"
+    factor: 0.5
+    patience: 10
+    min_lr: 1e-6
+
+# Anomaly detection
+anomaly:
+  threshold_method: "percentile"  # "percentile", "std_multiple", "iqr"
+  threshold_percentile: 95  # For percentile method
+  std_multiple: 3.0  # For std_multiple method
+  iqr_factor: 1.5   # For IQR method
+  
+  # Root cause analysis
+  top_k_anomalies: 5  # Top-K anomalous nodes to report
+  smoothing_window: 5  # Smoothing window for anomaly scores
+
+# Logging and checkpoints
+logging:
+  log_level: "INFO"
+  log_dir: "logs"
+  tensorboard_dir: "logs/tensorboard"
+  save_every_n_epochs: 10
+  
+checkpoints:
+  save_dir: "checkpoints"
+  save_best: true
+  save_last: true
+  
+# Visualization
+visualization:
+  save_dir: "visualizations"
+  dpi: 300
+  figsize: [15, 10]
+  node_colors:
+    Stream: "#3498DB"
+    VavlePro: "#E74C3C" 
+    Mixer: "#F39C12"
+    Tee: "#2ECC71"
+    Pipe: "#9B59B6"
+    Unknown: "#95A5A6"
+
+# System settings
+system:
+  device: "auto"  # "auto", "cpu", "cuda"
+  num_workers: 4
+  pin_memory: true
+  random_seed: 42
