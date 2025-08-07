@@ -22,6 +22,7 @@ sys.path.append(str(project_root))
 from src.training.train import PipelineTrainer
 from src.inference.anomaly_detection import AnomalyDetector, BatchAnomalyDetector
 from src.data.preprocessing import PipelineTopologyParser, SensorDataProcessor
+from src.utils.config_validator import load_and_validate_config
 
 
 def validate_data(config: dict):
@@ -273,8 +274,11 @@ Examples:
         print(f"Error: Configuration file not found: {config_path}")
         sys.exit(1)
     
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    try:
+        config = load_and_validate_config(config_path)
+    except Exception as e:
+        print(f"Error loading configuration: {e}")
+        sys.exit(1)
     
     print(f"S4 Steam Pipeline Anomaly Detection System")
     print(f"Configuration: {config_path}")

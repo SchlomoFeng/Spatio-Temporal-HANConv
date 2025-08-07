@@ -97,3 +97,6 @@ coverage.xml
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Test files
+test_config_fix.py
