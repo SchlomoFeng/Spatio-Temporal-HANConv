@@ -34,6 +34,7 @@ from src.data.preprocessing import (
 from src.data.dataset import StreamPipelineDataset, collate_hetero_batch
 from src.models.han_autoencoder import create_model
 from src.utils.config_validator import load_and_validate_config
+from src.utils.device_utils import log_pytorch_environment, validate_device_config, test_device_accessibility
 from torch.utils.data import DataLoader
 
 
@@ -104,15 +105,45 @@ class PipelineTrainer:
         self.val_losses = []
         
     def _setup_device(self) -> torch.device:
-        """Setup computing device"""
+        """Setup computing device with enhanced CUDA detection and error handling"""
         device_config = self.config['system']['device']
         
+        # Log detailed PyTorch environment information
+        log_pytorch_environment(self.logger)
+        
+        # Validate device configuration first
+        device_error = validate_device_config(device_config)
+        if device_error:
+            self.logger.error(f"Device configuration error: {device_error}")
+            raise ValueError(device_error)
+        
+        # Check CUDA availability and provide detailed information
+        cuda_available = torch.cuda.is_available()
+        
         if device_config == 'auto':
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            if cuda_available:
+                device = torch.device('cuda')
+                self.logger.info(f"✓ Auto-selected CUDA for GPU acceleration")
+            else:
+                device = torch.device('cpu')
+                self.logger.warning("⚠ Auto-selected CPU (CUDA not available)")
+                self.logger.info("For GPU acceleration, ensure you have:")
+                self.logger.info("  1. CUDA-compatible GPU installed")
+                self.logger.info("  2. CUDA drivers installed")
+                self.logger.info("  3. PyTorch with CUDA support: pip install -r requirements_cuda.txt")
         else:
+            # User specified a specific device - already validated above
             device = torch.device(device_config)
+            self.logger.info(f"✓ Using specified device: {device}")
             
-        self.logger.info(f"Using device: {device}")
+            if device.type == 'cpu' and cuda_available:
+                self.logger.info("Note: CUDA is available but CPU was explicitly requested")
+        
+        # Test device accessibility
+        if not test_device_accessibility(device, self.logger):
+            error_msg = f"Device {device} failed accessibility test"
+            raise RuntimeError(error_msg)
+            
         return device
     
     def _setup_logger(self) -> logging.Logger:

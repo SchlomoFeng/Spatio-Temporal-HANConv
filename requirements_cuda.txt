@@ -1,0 +1,33 @@
+# CUDA-enabled requirements for GPU acceleration
+# Install with: pip install -r requirements_cuda.txt
+
+# PyTorch with CUDA support (adjust CUDA version as needed)
+# For CUDA 11.8 (recommended for compatibility)
+torch>=2.0.0+cu118
+torchaudio>=2.0.0+cu118
+torchvision>=0.15.0+cu118
+
+# Alternative: Latest CUDA 12.1 (uncomment if needed)
+# torch>=2.0.0+cu121
+# torchaudio>=2.0.0+cu121  
+# torchvision>=0.15.0+cu121
+
+# PyTorch Geometric with CUDA support
+torch-geometric>=2.4.0
+torch-scatter>=2.1.0
+torch-sparse>=0.6.0
+torch-cluster>=1.6.0
+
+# Core dependencies
+pandas>=1.5.0
+numpy>=1.21.0
+scikit-learn>=1.3.0
+matplotlib>=3.5.0
+seaborn>=0.11.0
+networkx>=2.8.0
+tqdm>=4.64.0
+pyyaml>=6.0
+tensorboard>=2.10.0
+
+# CUDA-specific packages (optional but recommended)
+nvidia-ml-py3>=7.352.0  # For GPU monitoring and management

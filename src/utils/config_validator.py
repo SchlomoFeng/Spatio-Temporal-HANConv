@@ -147,6 +147,43 @@ def validate_config_structure(config: Dict[str, Any]) -> List[str]:
         if section not in config:
             errors.append(f"Missing required section: {section}")
     
+    # Validate system configuration early (including device settings)
+    if 'system' in config:
+        system_config = config['system']
+        
+        # Validate device configuration
+        if 'device' in system_config:
+            device_value = system_config['device']
+            valid_devices = ['auto', 'cpu', 'cuda']
+            
+            # Check for cuda:N pattern
+            if isinstance(device_value, str):
+                if device_value.startswith('cuda:'):
+                    try:
+                        # Extract and validate the GPU index
+                        gpu_index = int(device_value.split(':')[1])
+                        if gpu_index < 0:
+                            errors.append(f"system.device GPU index must be non-negative, got: {gpu_index}")
+                    except (ValueError, IndexError):
+                        errors.append(f"system.device has invalid CUDA index format: {device_value}")
+                elif device_value not in valid_devices:
+                    errors.append(f"system.device must be one of {valid_devices} or 'cuda:N', got: {device_value}")
+            else:
+                errors.append(f"system.device must be a string, got: {device_value} (type: {type(device_value)})")
+        
+        # Validate other system settings
+        for key in ['num_workers', 'random_seed']:
+            if key in system_config:
+                value = system_config[key]
+                if not isinstance(value, int) or value < 0:
+                    errors.append(f"system.{key} must be a non-negative integer, got: {value} (type: {type(value)})")
+        
+        # Validate boolean settings
+        if 'pin_memory' in system_config:
+            value = system_config['pin_memory']
+            if not isinstance(value, bool):
+                errors.append(f"system.pin_memory must be a boolean, got: {value} (type: {type(value)})")
+    
     # Validate data section
     if 'data' in config:
         data_config = config['data']
