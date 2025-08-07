@@ -33,6 +33,7 @@ from src.data.preprocessing import (
 )
 from src.data.dataset import StreamPipelineDataset, collate_hetero_batch
 from src.models.han_autoencoder import create_model
+from src.utils.config_validator import load_and_validate_config
 from torch.utils.data import DataLoader
 
 
@@ -530,8 +531,11 @@ def main():
     args = parser.parse_args()
     
     # Load configuration
-    with open(args.config, 'r') as f:
-        config = yaml.safe_load(f)
+    try:
+        config = load_and_validate_config(args.config)
+    except Exception as e:
+        print(f"Error loading configuration: {e}")
+        sys.exit(1)
     
     # Set random seeds for reproducibility
     torch.manual_seed(config['system']['random_seed'])
