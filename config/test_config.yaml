@@ -1,0 +1,85 @@
+# Test configuration with smaller parameters for quick testing
+data:
+  blueprint_path: "blueprint/0708YTS4.txt"
+  sensor_data_path: "data/0708YTS4.csv"
+  window_size: 30
+  stride: 20
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  scaler_type: "StandardScaler"
+  
+model:
+  stream_input_dim: 36
+  static_input_dim: 10
+  hidden_dim: 64
+  output_dim: 32
+  lstm:
+    hidden_size: 32
+    num_layers: 1
+    dropout: 0.1
+    bidirectional: false
+  static_encoder:
+    layers: [32, 32]
+    dropout: 0.1
+  hetero_conv:
+    type: "Linear"
+    num_layers: 2
+    heads: 2
+    dropout: 0.1
+  decoder:
+    layers: [64, 32, 36]
+    dropout: 0.1
+    activation: "ReLU"
+
+training:
+  batch_size: 1
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 1e-5
+  patience: 10
+  min_delta: 1e-4
+  loss_function: "MSELoss"
+  optimizer: "Adam"
+  scheduler:
+    type: "ReduceLROnPlateau"
+    factor: 0.5
+    patience: 5
+    min_lr: 1e-6
+
+anomaly:
+  threshold_method: "percentile"
+  threshold_percentile: 95
+  std_multiple: 3.0
+  iqr_factor: 1.5
+  top_k_anomalies: 5
+  smoothing_window: 5
+
+logging:
+  log_level: "INFO"
+  log_dir: "logs"
+  tensorboard_dir: "logs/tensorboard"
+  save_every_n_epochs: 2
+  
+checkpoints:
+  save_dir: "checkpoints"
+  save_best: true
+  save_last: true
+  
+visualization:
+  save_dir: "visualizations"
+  dpi: 300
+  figsize: [15, 10]
+  node_colors:
+    Stream: "#3498DB"
+    VavlePro: "#E74C3C" 
+    Mixer: "#F39C12"
+    Tee: "#2ECC71"
+    Pipe: "#9B59B6"
+    Unknown: "#95A5A6"
+
+system:
+  device: "auto"
+  num_workers: 0
+  pin_memory: false
+  random_seed: 42

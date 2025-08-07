@@ -75,8 +75,8 @@ class PipelineTrainer:
     
     def __init__(self, config: dict):
         self.config = config
+        self.logger = self._setup_logger()  # Move this earlier
         self.device = self._setup_device()
-        self.logger = self._setup_logger()
         
         # Create directories
         self._create_directories()
