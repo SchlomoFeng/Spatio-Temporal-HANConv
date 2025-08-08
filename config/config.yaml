@@ -5,7 +5,7 @@ data:
   blueprint_path: "blueprint/0708YTS4.txt"
   sensor_data_path: "data/0708YTS4.csv"
   window_size: 60  # Time window size for LSTM
-  stride: 10       # Sliding window stride
+  stride: 30       # Sliding window stride
   train_ratio: 0.7
   val_ratio: 0.15
   test_ratio: 0.15
@@ -34,34 +34,34 @@ model:
   # Heterogeneous graph convolution
   hetero_conv:
     type: "HANConv"  # "HANConv" or "HGTConv"
-    num_layers: 3
+    num_layers: 2
     heads: 4  # For attention mechanisms
     dropout: 0.2
     
   # Decoder MLP
   decoder:
     layers: [128, 64, 36]  # Reconstruct sensor readings
-    dropout: 0.2
-    activation: "ReLU"
+    dropout: 0.1
+    activation: "LeakyReLU"
 
 # Training settings
 training:
   batch_size: 32
-  epochs: 200
-  learning_rate: 0.001
-  weight_decay: 1e-5
-  patience: 20  # Early stopping
-  min_delta: 1e-4
+  epochs: 50
+  learning_rate: 1e-4
+  weight_decay: 1e-3
+  patience: 10  # Early stopping
+  min_delta: 1e-3
   
   # Loss function
   loss_function: "MSELoss"
   
   # Optimizer
-  optimizer: "Adam"
+  optimizer: "AdamW"
   scheduler:
     type: "ReduceLROnPlateau"
     factor: 0.5
-    patience: 10
+    patience: 5
     min_lr: 1e-6
 
 # Anomaly detection
@@ -90,7 +90,7 @@ checkpoints:
 # Visualization
 visualization:
   save_dir: "visualizations"
-  dpi: 300
+  dpi: 600
   figsize: [15, 10]
   node_colors:
     Stream: "#3498DB"
@@ -102,7 +102,7 @@ visualization:
 
 # System settings
 system:
-  device: "auto"  # "auto", "cpu", "cuda"
-  num_workers: 4
+  device: "cuda"  # "auto", "cpu", "cuda"
+  num_workers: 8
   pin_memory: true
   random_seed: 42
