@@ -55,7 +55,8 @@ training:
   gradient_clip_value: 1.0  # Add gradient clipping
   
   # Loss function
-  loss_function: "MSELoss"
+  loss_function: "WeightedMSELoss"  # Use weighted loss to handle sensor importance
+  loss_temperature: 0.1  # Temperature for weight updates
   
   # Optimizer
   optimizer: "AdamW"

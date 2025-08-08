@@ -278,6 +278,9 @@ class PipelineTrainer:
             return nn.MSELoss()
         elif loss_config == 'L1Loss':
             return nn.L1Loss()
+        elif loss_config == 'WeightedMSELoss':
+            # Model will handle weighted loss internally
+            return None
         else:
             raise ValueError(f"Unknown loss function: {loss_config}")
     
