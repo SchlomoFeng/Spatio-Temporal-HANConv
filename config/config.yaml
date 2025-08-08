@@ -6,8 +6,8 @@ data:
   sensor_data_path: "data/0708YTS4.csv"
   window_size: 60  # Time window size for LSTM
   stride: 30       # Sliding window stride
-  train_ratio: 0.7
-  val_ratio: 0.15
+  train_ratio: 0.65  # Reduced to give more data to validation
+  val_ratio: 0.20    # Increased from 0.15 for better generalization assessment
   test_ratio: 0.15
   scaler_type: "StandardScaler"  # StandardScaler, MinMaxScaler, RobustScaler
   
@@ -46,12 +46,13 @@ model:
 
 # Training settings
 training:
-  batch_size: 32
+  batch_size: 4  # Reduced from 32 for better stability with heterogeneous graphs
   epochs: 50
-  learning_rate: 1e-4
-  weight_decay: 1e-3
-  patience: 10  # Early stopping
-  min_delta: 1e-3
+  learning_rate: 5e-5  # Reduced from 1e-4 to prevent overfitting
+  weight_decay: 1e-2  # Increased regularization
+  patience: 7  # Reduced from 10 for faster early stopping
+  min_delta: 1e-4  # Slightly increased threshold
+  gradient_clip_value: 1.0  # Add gradient clipping
   
   # Loss function
   loss_function: "MSELoss"
@@ -60,9 +61,9 @@ training:
   optimizer: "AdamW"
   scheduler:
     type: "ReduceLROnPlateau"
-    factor: 0.5
-    patience: 5
-    min_lr: 1e-6
+    factor: 0.7  # More aggressive learning rate reduction
+    patience: 3  # Reduced patience for learning rate schedule
+    min_lr: 1e-7
 
 # Anomaly detection
 anomaly:

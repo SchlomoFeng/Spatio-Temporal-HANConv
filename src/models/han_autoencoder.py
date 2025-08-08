@@ -149,9 +149,23 @@ class HeteroGraphConvolution(nn.Module):
         # Transform each node type
         for node_type, features in x_dict.items():
             if node_type in self.node_transforms:
-                transformed = self.node_transforms[node_type](features)
-                transformed = F.relu(transformed)
-                transformed = self.dropout(transformed)
+                # Handle both batched and non-batched cases
+                original_shape = features.shape
+                if len(original_shape) == 3:
+                    # Batched: (batch_size, num_nodes, features)
+                    batch_size, num_nodes, feature_dim = original_shape
+                    features_flat = features.view(batch_size * num_nodes, feature_dim)
+                    transformed_flat = self.node_transforms[node_type](features_flat)
+                    transformed_flat = F.relu(transformed_flat)
+                    transformed_flat = self.dropout(transformed_flat)
+                    output_dim = transformed_flat.shape[-1]
+                    transformed = transformed_flat.view(batch_size, num_nodes, output_dim)
+                else:
+                    # Non-batched: (num_nodes, features)
+                    transformed = self.node_transforms[node_type](features)
+                    transformed = F.relu(transformed)
+                    transformed = self.dropout(transformed)
+                
                 out_dict[node_type] = transformed
         
         # Simple aggregation - in practice, you would implement proper message passing
@@ -311,7 +325,22 @@ class SpatioTemporalHANConv(nn.Module):
         
         # Encode Stream nodes with LSTM
         if 'stream_sequences' in batch and batch['stream_sequences'].size(0) > 0:
-            stream_embeddings = self.stream_encoder(batch['stream_sequences'])
+            batch_size = batch.get('batch_size', 1)
+            stream_sequences = batch['stream_sequences']
+            
+            # Handle batched input: (batch_size, num_stream_nodes, seq_len, features)
+            if len(stream_sequences.shape) == 4:
+                batch_size, num_stream_nodes, seq_len, features = stream_sequences.shape
+                # Reshape for LSTM: (batch_size * num_stream_nodes, seq_len, features)
+                stream_sequences = stream_sequences.view(batch_size * num_stream_nodes, seq_len, features)
+                stream_embeddings = self.stream_encoder(stream_sequences)
+                # Reshape back: (batch_size, num_stream_nodes, hidden_dim)
+                hidden_dim = stream_embeddings.shape[-1]
+                stream_embeddings = stream_embeddings.view(batch_size, num_stream_nodes, hidden_dim)
+            else:
+                # Single batch case: (num_stream_nodes, seq_len, features)
+                stream_embeddings = self.stream_encoder(stream_sequences)
+            
             node_embeddings['Stream'] = stream_embeddings
         
         # Encode static nodes
@@ -334,7 +363,21 @@ class SpatioTemporalHANConv(nn.Module):
         # 3. Decode Stream node embeddings to reconstruct sensor readings
         reconstructed = {}
         if 'Stream' in node_embeddings:
-            reconstructed['sensor_readings'] = self.decoder(node_embeddings['Stream'])
+            stream_embeddings = node_embeddings['Stream']
+            
+            # Handle batched embeddings
+            if len(stream_embeddings.shape) == 3:
+                # Batched: (batch_size, num_stream_nodes, hidden_dim)
+                batch_size, num_stream_nodes, hidden_dim = stream_embeddings.shape
+                # Reshape for decoder: (batch_size * num_stream_nodes, hidden_dim)
+                stream_embeddings_flat = stream_embeddings.view(batch_size * num_stream_nodes, hidden_dim)
+                reconstructed_flat = self.decoder(stream_embeddings_flat)
+                # Reshape back: (batch_size, num_stream_nodes, output_features)
+                output_features = reconstructed_flat.shape[-1]
+                reconstructed['sensor_readings'] = reconstructed_flat.view(batch_size, num_stream_nodes, output_features)
+            else:
+                # Single batch: (num_stream_nodes, hidden_dim)
+                reconstructed['sensor_readings'] = self.decoder(stream_embeddings)
         
         return {
             'reconstructed': reconstructed,
@@ -361,9 +404,19 @@ class SpatioTemporalHANConv(nn.Module):
                              targets: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Compute node-level anomaly scores"""
         if 'sensor_readings' in predictions['reconstructed'] and 'sensor_readings' in targets:
+            pred = predictions['reconstructed']['sensor_readings']
+            target = targets['sensor_readings']
+            
             # Compute per-sample reconstruction error
-            errors = torch.mean((predictions['reconstructed']['sensor_readings'] - 
-                               targets['sensor_readings']) ** 2, dim=1)
+            # Handle both batched and non-batched cases
+            if len(pred.shape) == 3:
+                # Batched: (batch_size, num_nodes, features) -> average over features, then flatten
+                errors = torch.mean((pred - target) ** 2, dim=2)  # (batch_size, num_nodes)
+                errors = errors.view(-1)  # Flatten to (batch_size * num_nodes,)
+            else:
+                # Non-batched: (num_nodes, features) -> average over features
+                errors = torch.mean((pred - target) ** 2, dim=1)  # (num_nodes,)
+            
             return errors
         
         return torch.zeros(0)

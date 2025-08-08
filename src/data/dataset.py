@@ -157,16 +157,37 @@ def collate_hetero_batch(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     if len(batch) == 0:
         return {}
     
-    # For time series data, we don't batch across different time windows
-    # Instead, we process each sample independently
-    # This is because the graph structure is the same for all samples
+    # Since the graph structure is the same for all samples,
+    # we can batch the time series data and targets
+    batch_size = len(batch)
     
-    # Take the first sample as representative (graph structure is the same)
-    sample = batch[0]
+    # Stack stream sequences from all samples
+    stream_sequences = torch.stack([sample['stream_sequences'] for sample in batch], dim=0)
+    # Shape: (batch_size, num_stream_nodes, seq_len, features)
     
-    # For simplicity, return single sample
-    # In practice, you might want to implement proper batching
-    return sample
+    # Stack targets
+    targets = {
+        'sensor_readings': torch.stack([sample['targets']['sensor_readings'] for sample in batch], dim=0)
+    }
+    # Shape: (batch_size, num_stream_nodes, features)
+    
+    # Take static features and edge indices from first sample (same for all)
+    static_features = batch[0]['static_features']
+    edge_index_dict = batch[0]['edge_index_dict']
+    
+    # Collect timestamps and node IDs
+    timestamps = [sample['timestamp'] for sample in batch]
+    stream_node_ids = batch[0]['stream_node_ids']  # Same for all samples
+    
+    return {
+        'stream_sequences': stream_sequences,
+        'static_features': static_features,
+        'edge_index_dict': edge_index_dict,
+        'targets': targets,
+        'timestamps': timestamps,
+        'stream_node_ids': stream_node_ids,
+        'batch_size': batch_size
+    }
 
 
 class PipelineDataModule:
@@ -252,7 +273,7 @@ class PipelineDataModule:
         """Create training data loader"""
         return DataLoader(
             self.train_dataset,
-            batch_size=1,  # Process one time window at a time
+            batch_size=self.config['training']['batch_size'],
             shuffle=True,
             num_workers=self.config['system']['num_workers'],
             pin_memory=self.config['system']['pin_memory'],
@@ -263,7 +284,7 @@ class PipelineDataModule:
         """Create validation data loader"""
         return DataLoader(
             self.val_dataset,
-            batch_size=1,
+            batch_size=self.config['training']['batch_size'],
             shuffle=False,
             num_workers=self.config['system']['num_workers'],
             pin_memory=self.config['system']['pin_memory'],
@@ -274,7 +295,7 @@ class PipelineDataModule:
         """Create test data loader"""
         return DataLoader(
             self.test_dataset,
-            batch_size=1,
+            batch_size=self.config['training']['batch_size'],
             shuffle=False,
             num_workers=self.config['system']['num_workers'],
             pin_memory=self.config['system']['pin_memory'],
