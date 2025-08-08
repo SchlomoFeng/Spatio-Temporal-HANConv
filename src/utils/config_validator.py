@@ -187,7 +187,7 @@ def validate_config_structure(config: Dict[str, Any]) -> List[str]:
                     errors.append(f"training.{key} must be a positive number, got: {value} (type: {type(value)})")
         
         # Check float values
-        for key in ['learning_rate', 'weight_decay', 'min_delta']:
+        for key in ['learning_rate', 'weight_decay', 'min_delta', 'gradient_clip_value']:
             if key in training_config:
                 value = training_config[key]
                 if not isinstance(value, (int, float)):
