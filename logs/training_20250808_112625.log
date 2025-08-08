@@ -1,0 +1,58 @@
+2025-08-08 11:26:25,654 - PipelineTrainer - INFO - Using device: cuda
+2025-08-08 11:26:25,654 - PipelineTrainer - INFO - Setting up data module...
+2025-08-08 11:26:26,260 - PipelineTrainer - INFO - Data module setup completed
+2025-08-08 11:26:26,261 - PipelineTrainer - INFO - Setting up model...
+2025-08-08 11:26:26,787 - PipelineTrainer - INFO - Starting training...
+2025-08-08 11:27:44,908 - PipelineTrainer - INFO - Epoch 1/50 - Train Loss: 0.612011, Val Loss: 0.842415
+2025-08-08 11:29:02,818 - PipelineTrainer - INFO - Epoch 2/50 - Train Loss: 0.380145, Val Loss: 0.727862
+2025-08-08 11:30:20,860 - PipelineTrainer - INFO - Epoch 3/50 - Train Loss: 0.320784, Val Loss: 0.699696
+2025-08-08 11:31:40,251 - PipelineTrainer - INFO - Epoch 4/50 - Train Loss: 0.286198, Val Loss: 0.664051
+2025-08-08 11:32:58,995 - PipelineTrainer - INFO - Epoch 5/50 - Train Loss: 0.260910, Val Loss: 0.642356
+2025-08-08 11:34:18,011 - PipelineTrainer - INFO - Epoch 6/50 - Train Loss: 0.243275, Val Loss: 0.622105
+2025-08-08 11:35:37,980 - PipelineTrainer - INFO - Epoch 7/50 - Train Loss: 0.229958, Val Loss: 0.603657
+2025-08-08 11:36:57,488 - PipelineTrainer - INFO - Epoch 8/50 - Train Loss: 0.220389, Val Loss: 0.617211
+2025-08-08 11:38:16,107 - PipelineTrainer - INFO - Epoch 9/50 - Train Loss: 0.211164, Val Loss: 0.586959
+2025-08-08 11:39:34,434 - PipelineTrainer - INFO - Epoch 10/50 - Train Loss: 0.203469, Val Loss: 0.580532
+2025-08-08 11:40:53,297 - PipelineTrainer - INFO - Epoch 11/50 - Train Loss: 0.196767, Val Loss: 0.578471
+2025-08-08 11:42:13,505 - PipelineTrainer - INFO - Epoch 12/50 - Train Loss: 0.189774, Val Loss: 0.571449
+2025-08-08 11:43:49,452 - PipelineTrainer - INFO - Epoch 13/50 - Train Loss: 0.184161, Val Loss: 0.576225
+2025-08-08 11:45:08,975 - PipelineTrainer - INFO - Epoch 14/50 - Train Loss: 0.178512, Val Loss: 0.574404
+2025-08-08 11:46:27,943 - PipelineTrainer - INFO - Epoch 15/50 - Train Loss: 0.173712, Val Loss: 0.573866
+2025-08-08 11:47:46,589 - PipelineTrainer - INFO - Epoch 16/50 - Train Loss: 0.169074, Val Loss: 0.570168
+2025-08-08 11:49:06,271 - PipelineTrainer - INFO - Epoch 17/50 - Train Loss: 0.164169, Val Loss: 0.554943
+2025-08-08 11:50:26,072 - PipelineTrainer - INFO - Epoch 18/50 - Train Loss: 0.161077, Val Loss: 0.549789
+2025-08-08 11:51:45,452 - PipelineTrainer - INFO - Epoch 19/50 - Train Loss: 0.157368, Val Loss: 0.545454
+2025-08-08 11:53:04,799 - PipelineTrainer - INFO - Epoch 20/50 - Train Loss: 0.153720, Val Loss: 0.536773
+2025-08-08 11:54:24,024 - PipelineTrainer - INFO - Epoch 21/50 - Train Loss: 0.150749, Val Loss: 0.533273
+2025-08-08 11:55:43,400 - PipelineTrainer - INFO - Epoch 22/50 - Train Loss: 0.147841, Val Loss: 0.530358
+2025-08-08 11:57:03,088 - PipelineTrainer - INFO - Epoch 23/50 - Train Loss: 0.143957, Val Loss: 0.535954
+2025-08-08 11:58:21,928 - PipelineTrainer - INFO - Epoch 24/50 - Train Loss: 0.141210, Val Loss: 0.529240
+2025-08-08 11:59:40,659 - PipelineTrainer - INFO - Epoch 25/50 - Train Loss: 0.137813, Val Loss: 0.524471
+2025-08-08 12:00:59,992 - PipelineTrainer - INFO - Epoch 26/50 - Train Loss: 0.135436, Val Loss: 0.525760
+2025-08-08 12:02:19,447 - PipelineTrainer - INFO - Epoch 27/50 - Train Loss: 0.132150, Val Loss: 0.521806
+2025-08-08 12:03:38,450 - PipelineTrainer - INFO - Epoch 28/50 - Train Loss: 0.129742, Val Loss: 0.509342
+2025-08-08 12:04:57,836 - PipelineTrainer - INFO - Epoch 29/50 - Train Loss: 0.127320, Val Loss: 0.517874
+2025-08-08 12:06:16,881 - PipelineTrainer - INFO - Epoch 30/50 - Train Loss: 0.124935, Val Loss: 0.517395
+2025-08-08 12:07:36,159 - PipelineTrainer - INFO - Epoch 31/50 - Train Loss: 0.122833, Val Loss: 0.505892
+2025-08-08 12:08:55,687 - PipelineTrainer - INFO - Epoch 32/50 - Train Loss: 0.120892, Val Loss: 0.499650
+2025-08-08 12:10:15,019 - PipelineTrainer - INFO - Epoch 33/50 - Train Loss: 0.118427, Val Loss: 0.496371
+2025-08-08 12:11:34,046 - PipelineTrainer - INFO - Epoch 34/50 - Train Loss: 0.116875, Val Loss: 0.486590
+2025-08-08 12:12:53,426 - PipelineTrainer - INFO - Epoch 35/50 - Train Loss: 0.115205, Val Loss: 0.483856
+2025-08-08 12:14:12,803 - PipelineTrainer - INFO - Epoch 36/50 - Train Loss: 0.113607, Val Loss: 0.485009
+2025-08-08 12:15:32,389 - PipelineTrainer - INFO - Epoch 37/50 - Train Loss: 0.111841, Val Loss: 0.487525
+2025-08-08 12:16:51,339 - PipelineTrainer - INFO - Epoch 38/50 - Train Loss: 0.111165, Val Loss: 0.480568
+2025-08-08 12:18:10,075 - PipelineTrainer - INFO - Epoch 39/50 - Train Loss: 0.109512, Val Loss: 0.470351
+2025-08-08 12:19:29,497 - PipelineTrainer - INFO - Epoch 40/50 - Train Loss: 0.109017, Val Loss: 0.477056
+2025-08-08 12:20:49,058 - PipelineTrainer - INFO - Epoch 41/50 - Train Loss: 0.107467, Val Loss: 0.472538
+2025-08-08 12:22:07,914 - PipelineTrainer - INFO - Epoch 42/50 - Train Loss: 0.105988, Val Loss: 0.463024
+2025-08-08 12:23:26,547 - PipelineTrainer - INFO - Epoch 43/50 - Train Loss: 0.105028, Val Loss: 0.463327
+2025-08-08 12:24:45,762 - PipelineTrainer - INFO - Epoch 44/50 - Train Loss: 0.104555, Val Loss: 0.462916
+2025-08-08 12:26:05,352 - PipelineTrainer - INFO - Epoch 45/50 - Train Loss: 0.103837, Val Loss: 0.454960
+2025-08-08 12:27:24,551 - PipelineTrainer - INFO - Epoch 46/50 - Train Loss: 0.103032, Val Loss: 0.464650
+2025-08-08 12:28:43,540 - PipelineTrainer - INFO - Epoch 47/50 - Train Loss: 0.102212, Val Loss: 0.459329
+2025-08-08 12:30:02,290 - PipelineTrainer - INFO - Epoch 48/50 - Train Loss: 0.101376, Val Loss: 0.453092
+2025-08-08 12:31:21,281 - PipelineTrainer - INFO - Epoch 49/50 - Train Loss: 0.100552, Val Loss: 0.452331
+2025-08-08 12:32:40,892 - PipelineTrainer - INFO - Epoch 50/50 - Train Loss: 0.100137, Val Loss: 0.455419
+2025-08-08 12:32:40,904 - PipelineTrainer - INFO - Training completed!
+2025-08-08 12:32:40,904 - PipelineTrainer - INFO - Computing anomaly threshold...
+2025-08-08 12:32:41,613 - PipelineTrainer - INFO - Anomaly threshold computed: 0.685654
