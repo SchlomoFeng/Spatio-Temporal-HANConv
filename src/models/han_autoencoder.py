@@ -149,9 +149,23 @@ class HeteroGraphConvolution(nn.Module):
         # Transform each node type
         for node_type, features in x_dict.items():
             if node_type in self.node_transforms:
-                transformed = self.node_transforms[node_type](features)
-                transformed = F.relu(transformed)
-                transformed = self.dropout(transformed)
+                # Handle both batched and non-batched cases
+                original_shape = features.shape
+                if len(original_shape) == 3:
+                    # Batched: (batch_size, num_nodes, features)
+                    batch_size, num_nodes, feature_dim = original_shape
+                    features_flat = features.view(batch_size * num_nodes, feature_dim)
+                    transformed_flat = self.node_transforms[node_type](features_flat)
+                    transformed_flat = F.relu(transformed_flat)
+                    transformed_flat = self.dropout(transformed_flat)
+                    output_dim = transformed_flat.shape[-1]
+                    transformed = transformed_flat.view(batch_size, num_nodes, output_dim)
+                else:
+                    # Non-batched: (num_nodes, features)
+                    transformed = self.node_transforms[node_type](features)
+                    transformed = F.relu(transformed)
+                    transformed = self.dropout(transformed)
+                
                 out_dict[node_type] = transformed
         
         # Simple aggregation - in practice, you would implement proper message passing
@@ -159,7 +173,85 @@ class HeteroGraphConvolution(nn.Module):
         return out_dict
 
 
+class WeightedMSELoss(nn.Module):
+    """Weighted MSE Loss to handle sensor importance and reduce overfitting"""
+    
+    def __init__(self, num_sensors: int = 36, temperature: float = 1.0):
+        super(WeightedMSELoss, self).__init__()
+        self.num_sensors = num_sensors
+        self.temperature = temperature
+        
+        # Initialize uniform weights, will be updated based on variance
+        self.register_buffer('sensor_weights', torch.ones(num_sensors))
+        
+    def update_weights(self, sensor_data: torch.Tensor):
+        """Update sensor weights based on data variance (more weight to less varying sensors)"""
+        if len(sensor_data.shape) == 3:
+            # Batched: (batch_size, num_nodes, num_sensors)
+            sensor_data = sensor_data.view(-1, sensor_data.shape[-1])
+        
+        # Compute variance for each sensor
+        sensor_var = torch.var(sensor_data, dim=0) + 1e-8  # Add small epsilon
+        
+        # Inverse variance weighting (sensors with less variance get more weight)
+        weights = 1.0 / (sensor_var + 1e-8)
+        weights = weights / weights.sum() * len(weights)  # Normalize
+        
+        # Smooth update with temperature
+        self.sensor_weights = (1 - self.temperature) * self.sensor_weights + self.temperature * weights
+    
+    def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """Compute weighted MSE loss"""
+        # Compute per-sensor MSE
+        mse_per_sensor = torch.mean((predictions - targets) ** 2, dim=tuple(range(len(predictions.shape) - 1)))
+        
+        # Apply weights
+        weighted_loss = torch.sum(mse_per_sensor * self.sensor_weights) / self.sensor_weights.sum()
+        
+        return weighted_loss
+
+
 class MLPDecoder(nn.Module):
+    """MLP decoder for reconstructing sensor readings"""
+    
+    def __init__(self, input_dim: int, hidden_dims: List[int], output_dim: int, 
+                 dropout: float = 0.2, activation: str = "ReLU"):
+        super(MLPDecoder, self).__init__()
+        
+        if activation == "ReLU":
+            activation_fn = nn.ReLU
+        elif activation == "GELU":
+            activation_fn = nn.GELU
+        elif activation == "LeakyReLU":
+            activation_fn = nn.LeakyReLU
+        else:
+            raise ValueError(f"Unknown activation: {activation}")
+        
+        layers = []
+        prev_dim = input_dim
+        
+        for hidden_dim in hidden_dims:
+            layers.extend([
+                nn.Linear(prev_dim, hidden_dim),
+                activation_fn(),
+                nn.Dropout(dropout)
+            ])
+            prev_dim = hidden_dim
+        
+        # Output layer (no activation or dropout)
+        layers.append(nn.Linear(prev_dim, output_dim))
+        
+        self.decoder = nn.Sequential(*layers)
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass
+        Args:
+            x: Input tensor of shape (num_nodes, input_dim)
+        Returns:
+            Reconstructed features of shape (num_nodes, output_dim)
+        """
+        return self.decoder(x)
     """MLP decoder for reconstructing sensor readings"""
     
     def __init__(self, input_dim: int, hidden_dims: List[int], output_dim: int, 
@@ -278,14 +370,25 @@ class SpatioTemporalHANConv(nn.Module):
         
         # Initialize weights
         self.apply(self._init_weights)
+        
+        # Initialize weighted loss function if specified
+        if config.get('training', {}).get('loss_function') == 'WeightedMSELoss':
+            self.weighted_loss = WeightedMSELoss(
+                num_sensors=config['model']['decoder']['layers'][-1],
+                temperature=config.get('training', {}).get('loss_temperature', 0.1)
+            )
+        else:
+            self.weighted_loss = None
     
     def _init_weights(self, module):
-        """Initialize model weights"""
+        """Initialize model weights with better strategies for stability"""
         if isinstance(module, nn.Linear):
-            torch.nn.init.xavier_uniform_(module.weight)
+            # Xavier/Glorot initialization for linear layers
+            torch.nn.init.xavier_uniform_(module.weight, gain=nn.init.calculate_gain('relu'))
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.LSTM):
+            # Proper LSTM initialization
             for name, param in module.named_parameters():
                 if 'weight_ih' in name:
                     torch.nn.init.xavier_uniform_(param.data)
@@ -293,6 +396,10 @@ class SpatioTemporalHANConv(nn.Module):
                     torch.nn.init.orthogonal_(param.data)
                 elif 'bias' in name:
                     torch.nn.init.zeros_(param.data)
+                    # Set forget gate bias to 1 for better learning
+                    if 'bias_ih' in name:
+                        n = param.size(0)
+                        param.data[n//4:n//2].fill_(1.)
     
     def forward(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:
         """
@@ -311,7 +418,22 @@ class SpatioTemporalHANConv(nn.Module):
         
         # Encode Stream nodes with LSTM
         if 'stream_sequences' in batch and batch['stream_sequences'].size(0) > 0:
-            stream_embeddings = self.stream_encoder(batch['stream_sequences'])
+            batch_size = batch.get('batch_size', 1)
+            stream_sequences = batch['stream_sequences']
+            
+            # Handle batched input: (batch_size, num_stream_nodes, seq_len, features)
+            if len(stream_sequences.shape) == 4:
+                batch_size, num_stream_nodes, seq_len, features = stream_sequences.shape
+                # Reshape for LSTM: (batch_size * num_stream_nodes, seq_len, features)
+                stream_sequences = stream_sequences.view(batch_size * num_stream_nodes, seq_len, features)
+                stream_embeddings = self.stream_encoder(stream_sequences)
+                # Reshape back: (batch_size, num_stream_nodes, hidden_dim)
+                hidden_dim = stream_embeddings.shape[-1]
+                stream_embeddings = stream_embeddings.view(batch_size, num_stream_nodes, hidden_dim)
+            else:
+                # Single batch case: (num_stream_nodes, seq_len, features)
+                stream_embeddings = self.stream_encoder(stream_sequences)
+            
             node_embeddings['Stream'] = stream_embeddings
         
         # Encode static nodes
@@ -334,7 +456,21 @@ class SpatioTemporalHANConv(nn.Module):
         # 3. Decode Stream node embeddings to reconstruct sensor readings
         reconstructed = {}
         if 'Stream' in node_embeddings:
-            reconstructed['sensor_readings'] = self.decoder(node_embeddings['Stream'])
+            stream_embeddings = node_embeddings['Stream']
+            
+            # Handle batched embeddings
+            if len(stream_embeddings.shape) == 3:
+                # Batched: (batch_size, num_stream_nodes, hidden_dim)
+                batch_size, num_stream_nodes, hidden_dim = stream_embeddings.shape
+                # Reshape for decoder: (batch_size * num_stream_nodes, hidden_dim)
+                stream_embeddings_flat = stream_embeddings.view(batch_size * num_stream_nodes, hidden_dim)
+                reconstructed_flat = self.decoder(stream_embeddings_flat)
+                # Reshape back: (batch_size, num_stream_nodes, output_features)
+                output_features = reconstructed_flat.shape[-1]
+                reconstructed['sensor_readings'] = reconstructed_flat.view(batch_size, num_stream_nodes, output_features)
+            else:
+                # Single batch: (num_stream_nodes, hidden_dim)
+                reconstructed['sensor_readings'] = self.decoder(stream_embeddings)
         
         return {
             'reconstructed': reconstructed,
@@ -344,15 +480,30 @@ class SpatioTemporalHANConv(nn.Module):
     def compute_reconstruction_loss(self, predictions: Dict[str, torch.Tensor], 
                                   targets: Dict[str, torch.Tensor], 
                                   loss_fn: nn.Module = None) -> torch.Tensor:
-        """Compute reconstruction loss"""
-        if loss_fn is None:
-            loss_fn = nn.MSELoss()
-        
+        """Compute reconstruction loss with optional weighted loss"""
         total_loss = 0.0
         
         if 'sensor_readings' in predictions['reconstructed'] and 'sensor_readings' in targets:
-            sensor_loss = loss_fn(predictions['reconstructed']['sensor_readings'], 
-                                targets['sensor_readings'])
+            pred = predictions['reconstructed']['sensor_readings']
+            target = targets['sensor_readings']
+            
+            # Use weighted loss if available
+            if self.weighted_loss is not None:
+                # Update weights periodically (every few calls)
+                if not hasattr(self, '_loss_call_count'):
+                    self._loss_call_count = 0
+                self._loss_call_count += 1
+                
+                if self._loss_call_count % 10 == 0:  # Update every 10 calls
+                    self.weighted_loss.update_weights(target)
+                
+                sensor_loss = self.weighted_loss(pred, target)
+            else:
+                # Use provided loss function or default MSE
+                if loss_fn is None:
+                    loss_fn = nn.MSELoss()
+                sensor_loss = loss_fn(pred, target)
+            
             total_loss += sensor_loss
         
         return total_loss
@@ -361,9 +512,19 @@ class SpatioTemporalHANConv(nn.Module):
                              targets: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Compute node-level anomaly scores"""
         if 'sensor_readings' in predictions['reconstructed'] and 'sensor_readings' in targets:
+            pred = predictions['reconstructed']['sensor_readings']
+            target = targets['sensor_readings']
+            
             # Compute per-sample reconstruction error
-            errors = torch.mean((predictions['reconstructed']['sensor_readings'] - 
-                               targets['sensor_readings']) ** 2, dim=1)
+            # Handle both batched and non-batched cases
+            if len(pred.shape) == 3:
+                # Batched: (batch_size, num_nodes, features) -> average over features, then flatten
+                errors = torch.mean((pred - target) ** 2, dim=2)  # (batch_size, num_nodes)
+                errors = errors.view(-1)  # Flatten to (batch_size * num_nodes,)
+            else:
+                # Non-batched: (num_nodes, features) -> average over features
+                errors = torch.mean((pred - target) ** 2, dim=1)  # (num_nodes,)
+            
             return errors
         
         return torch.zeros(0)

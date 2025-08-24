@@ -22,6 +22,7 @@ import argparse
 from pathlib import Path
 import logging
 from datetime import datetime
+from typing import Tuple
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -102,6 +103,7 @@ class PipelineTrainer:
         self.best_val_loss = float('inf')
         self.train_losses = []
         self.val_losses = []
+        self.gradient_norms = []  # Track gradient norms
         
     def _setup_device(self) -> torch.device:
         """Setup computing device"""
@@ -276,6 +278,9 @@ class PipelineTrainer:
             return nn.MSELoss()
         elif loss_config == 'L1Loss':
             return nn.L1Loss()
+        elif loss_config == 'WeightedMSELoss':
+            # Model will handle weighted loss internally
+            return None
         else:
             raise ValueError(f"Unknown loss function: {loss_config}")
     
@@ -284,7 +289,8 @@ class PipelineTrainer:
         training_config = self.config['training']
         return EarlyStopping(
             patience=training_config['patience'],
-            min_delta=training_config['min_delta']
+            min_delta=training_config['min_delta'],
+            restore_best_weights=True
         )
     
     def _setup_tensorboard(self):
@@ -293,16 +299,17 @@ class PipelineTrainer:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         return SummaryWriter(log_dir / f'run_{timestamp}')
     
-    def train_epoch(self) -> float:
-        """Train for one epoch"""
+    def train_epoch(self) -> Tuple[float, float]:
+        """Train for one epoch and return average loss and gradient norm"""
         self.model.train()
         total_loss = 0.0
+        total_grad_norm = 0.0
         num_batches = 0
         
         # Create data loader
         train_loader = DataLoader(
             self.train_dataset,
-            batch_size=1,
+            batch_size=self.config['training']['batch_size'],
             shuffle=True,
             num_workers=self.config['system']['num_workers'],
             pin_memory=self.config['system']['pin_memory'],
@@ -327,17 +334,39 @@ class PipelineTrainer:
             
             # Backward pass
             loss.backward()
+            
+            # Gradient clipping for training stability and monitoring
+            grad_norm = 0.0
+            if 'gradient_clip_value' in self.config['training']:
+                grad_norm = torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), 
+                    self.config['training']['gradient_clip_value']
+                )
+            else:
+                # Just compute gradient norm for monitoring
+                total_norm = 0
+                for p in self.model.parameters():
+                    if p.grad is not None:
+                        param_norm = p.grad.data.norm(2)
+                        total_norm += param_norm.item() ** 2
+                grad_norm = total_norm ** (1. / 2)
+            
             self.optimizer.step()
             
             # Update statistics
             total_loss += loss.item()
+            total_grad_norm += grad_norm
             num_batches += 1
             
-            # Update progress bar
-            pbar.set_postfix({'loss': f'{loss.item():.6f}'})
+            # Update progress bar with gradient norm
+            pbar.set_postfix({
+                'loss': f'{loss.item():.6f}',
+                'grad_norm': f'{grad_norm:.4f}'
+            })
         
         avg_loss = total_loss / num_batches if num_batches > 0 else 0.0
-        return avg_loss
+        avg_grad_norm = total_grad_norm / num_batches if num_batches > 0 else 0.0
+        return avg_loss, avg_grad_norm
     
     def validate_epoch(self) -> float:
         """Validate for one epoch"""
@@ -348,7 +377,7 @@ class PipelineTrainer:
         # Create data loader
         val_loader = DataLoader(
             self.val_dataset,
-            batch_size=1,
+            batch_size=self.config['training']['batch_size'],
             shuffle=False,
             num_workers=self.config['system']['num_workers'],
             pin_memory=self.config['system']['pin_memory'],
@@ -428,8 +457,9 @@ class PipelineTrainer:
             self.current_epoch = epoch
             
             # Training
-            train_loss = self.train_epoch()
+            train_loss, avg_grad_norm = self.train_epoch()
             self.train_losses.append(train_loss)
+            self.gradient_norms.append(avg_grad_norm)
             
             # Validation
             val_loss = self.validate_epoch()
@@ -442,6 +472,7 @@ class PipelineTrainer:
             # Logging
             self.writer.add_scalar('Loss/Train', train_loss, epoch)
             self.writer.add_scalar('Loss/Validation', val_loss, epoch)
+            self.writer.add_scalar('Training/Gradient_Norm', avg_grad_norm, epoch)
             
             if self.scheduler is not None:
                 self.writer.add_scalar('Learning_Rate', self.optimizer.param_groups[0]['lr'], epoch)
@@ -449,7 +480,8 @@ class PipelineTrainer:
             # Print progress
             self.logger.info(
                 f'Epoch {epoch + 1}/{epochs} - '
-                f'Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}'
+                f'Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}, '
+                f'Grad Norm: {avg_grad_norm:.4f}, LR: {self.optimizer.param_groups[0]["lr"]:.2e}'
             )
             
             # Save best model
@@ -478,7 +510,7 @@ class PipelineTrainer:
         
         val_loader = DataLoader(
             self.val_dataset,
-            batch_size=1,
+            batch_size=self.config['training']['batch_size'],
             shuffle=False,
             collate_fn=collate_hetero_batch
         )
