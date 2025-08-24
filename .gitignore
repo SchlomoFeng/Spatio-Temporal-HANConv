@@ -100,3 +100,4 @@ dmypy.json
 
 # Test files
 test_config_fix.py
+test_device_config.py

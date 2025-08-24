@@ -35,7 +35,9 @@
 - PyTorch >= 2.0.0
 - CUDA (可选，GPU加速)
 
-### 安装依赖
+### 快速安装
+
+**CPU版本（默认）：**
 ```bash
 # 克隆项目
 git clone https://github.com/SchlomoFeng/Spatio-Temporal-HANConv.git
@@ -43,6 +45,29 @@ cd Spatio-Temporal-HANConv
 
 # 安装依赖
 pip install -r requirements.txt
+```
+
+**GPU版本（推荐）：**
+```bash
+# 安装CUDA支持的PyTorch
+pip install -r requirements_cuda.txt
+```
+
+### 详细安装指南
+
+查看 [INSTALLATION.md](INSTALLATION.md) 获取：
+- 完整的安装说明
+- GPU环境配置
+- 故障排除指南
+- 性能优化建议
+
+### 环境验证
+```bash
+# 验证安装
+python main.py --mode validate
+
+# 检查CUDA支持
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 ```
 
 ### 依赖包说明
@@ -267,13 +292,30 @@ results = batch_detector.detect_anomalies_in_dataset(historical_dataset)
 
 ### 常见问题
 
-**1. 数据加载错误**
+**1. CUDA支持问题**
+```bash
+# 错误：Torch not compiled with CUDA support
+# 解决：安装CUDA版本的PyTorch
+pip install -r requirements_cuda.txt
+
+# 检查环境
+python src/utils/device_utils.py
+```
+
+**2. 设备配置错误**
+```yaml
+# 在config/config.yaml中设置设备
+system:
+  device: "auto"  # "auto", "cpu", "cuda", "cuda:0"
+```
+
+**3. 内存不足**
 ```bash
 # 检查文件路径和格式
 python main.py --mode validate
 ```
 
-**2. 内存不足**
+**4. 内存不足**
 ```yaml
 # 减小批量大小和窗口大小
 training:
@@ -282,19 +324,28 @@ data:
   window_size: 30
 ```
 
-**3. GPU内存不足**
+**5. GPU内存不足**
 ```yaml
 # 使用CPU训练
 system:
   device: "cpu"
 ```
 
-**4. 收敛慢或不收敛**
+**6. 收敛慢或不收敛**
 ```yaml
 # 调整学习率和优化器
 training:
   learning_rate: 0.0001
   optimizer: "AdamW"
+```
+
+### 环境检查工具
+```bash
+# 详细环境信息
+python src/utils/device_utils.py
+
+# 配置验证
+python src/utils/config_validator.py config/config.yaml
 ```
 
 ### 日志查看
